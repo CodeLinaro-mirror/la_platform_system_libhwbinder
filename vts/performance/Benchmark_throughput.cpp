@@ -15,8 +15,8 @@
  */
 #define LOG_TAG "HwbinderThroughputTest"
 
+#include <android/log.h>
 #include <android/hardware/tests/libhwbinder/1.0/IBenchmark.h>
-#include <hwbinder/IPCThreadState.h>
 #include <hidl/HidlSupport.h>
 
 #include <string>
@@ -179,10 +179,13 @@ void service_fx(const string &serviceName, Pipe p) {
     // Start service.
     sp<IBenchmark> server = IBenchmark::getService(serviceName, true);
     ALOGD("Registering %s", serviceName.c_str());
-    server->registerAsService(serviceName);
+    status_t status = server->registerAsService(serviceName);
+    if (status != ::android::OK) {
+        ALOGE("Failed to register service %s", serviceName.c_str());
+        exit(EXIT_FAILURE);
+    }
+
     ALOGD("Starting %s", serviceName.c_str());
-    ProcessState::self()->setThreadPoolMaxThreadCount(0);
-    ProcessState::self()->startThreadPool();
 
     // Signal service started to master and wait to exit.
     p.signal();
@@ -229,12 +232,11 @@ void worker_fx(
         int target = rand() % service_count;
 
         start = chrono::high_resolution_clock::now();
-        Status status = workers[target]->sendVec(data_vec, [&](const auto &) {})
-                .getStatus();
-        if (!status.isOk()) {
+        Return<void> ret = workers[target]->sendVec(data_vec, [&](const auto &) {});
+        if (!ret.isOk()) {
             cout << "thread " << num << " failed status: "
-                << status.exceptionCode() << endl;
-            exit (EXIT_FAILURE);
+                << ret.description() << endl;
+            exit(EXIT_FAILURE);
         }
         end = chrono::high_resolution_clock::now();
 

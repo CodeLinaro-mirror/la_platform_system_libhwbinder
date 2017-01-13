@@ -47,21 +47,22 @@ struct BufferedTextOutput::BufferState : public RefBase
     ~BufferState() {
         free(buffer);
     }
-    
+
     status_t append(const char* txt, size_t len) {
         if ((len+bufferPos) > bufferSize) {
             size_t newSize = ((len+bufferPos)*3)/2;
-            if (newSize < (len+bufferPos)) return NO_MEMORY;    // overflow
+            if (newSize < (len+bufferPos)) return NO_MEMORY;  // overflow
             void* b = realloc(buffer, newSize);
             if (!b) return NO_MEMORY;
             buffer = (char*)b;
             bufferSize = newSize;
         }
+        if ((len+bufferPos) < bufferPos) return NO_MEMORY;  // integer overflow
         memcpy(buffer+bufferPos, txt, len);
         bufferPos += len;
         return NO_ERROR;
     }
-    
+
     void restart() {
         bufferPos = 0;
         atFront = true;
@@ -73,7 +74,7 @@ struct BufferedTextOutput::BufferState : public RefBase
             }
         }
     }
-    
+
     const int32_t seq;
     char* buffer;
     size_t bufferPos;
@@ -113,9 +114,9 @@ static volatile int32_t gFreeBufferIndex = -1;
 static int32_t allocBufferIndex()
 {
     int32_t res = -1;
-    
+
     mutex_lock(&gMutex);
-    
+
     if (gFreeBufferIndex >= 0) {
         res = gFreeBufferIndex;
         gFreeBufferIndex = gTextBuffers[res];
@@ -127,7 +128,7 @@ static int32_t allocBufferIndex()
     }
 
     mutex_unlock(&gMutex);
-    
+
     return res;
 }
 
@@ -149,7 +150,7 @@ BufferedTextOutput::BufferedTextOutput(uint32_t flags)
     mGlobalState = new BufferState(mSeq);
     if (mGlobalState) mGlobalState->incStrong(this);
 }
-    
+
 BufferedTextOutput::~BufferedTextOutput()
 {
     if (mGlobalState) mGlobalState->decStrong(this);
@@ -158,23 +159,19 @@ BufferedTextOutput::~BufferedTextOutput()
 
 status_t BufferedTextOutput::print(const char* txt, size_t len)
 {
-    //printf("BufferedTextOutput: printing %d\n", len);
-    
     AutoMutex _l(mLock);
     BufferState* b = getBuffer();
-    
     const char* const end = txt+len;
-    
     status_t err;
 
     while (txt < end) {
         // Find the next line.
         const char* first = txt;
         while (txt < end && *txt != '\n') txt++;
-        
+
         // Include this and all following empty lines.
         while (txt < end && *txt == '\n') txt++;
-        
+
         // Special cases for first data on a line.
         if (b->atFront) {
             if (b->indent > 0) {
@@ -182,12 +179,11 @@ status_t BufferedTextOutput::print(const char* txt, size_t len)
                 const char* prefix = stringForIndent(b->indent);
                 err = b->append(prefix, strlen(prefix));
                 if (err != NO_ERROR) return err;
-                
             } else if (*(txt-1) == '\n' && !b->bundle) {
                 // Fast path: if we are not indenting or bundling, and
                 // have been given one or more complete lines, just write
                 // them out without going through the buffer.
-                
+
                 // Slurp up all of the lines.
                 const char* lastLine = txt+1;
                 while (txt < end) {
@@ -202,12 +198,12 @@ status_t BufferedTextOutput::print(const char* txt, size_t len)
                 continue;
             }
         }
-        
+
         // Append the new text to the buffer.
         err = b->append(first, txt-first);
         if (err != NO_ERROR) return err;
         b->atFront = *(txt-1) == '\n';
-        
+
         // If we have finished a line and are not bundling, write
         // it out.
         //printf("Buffer is now %d bytes\n", b->bufferPos);
@@ -220,7 +216,7 @@ status_t BufferedTextOutput::print(const char* txt, size_t len)
             b->restart();
         }
     }
-    
+
     return NO_ERROR;
 }
 
@@ -247,7 +243,7 @@ void BufferedTextOutput::popBundle()
     LOG_FATAL_IF(b->bundle < 0,
         "TextOutput::popBundle() called more times than pushBundle()");
     if (b->bundle < 0) b->bundle = 0;
-    
+
     if (b->bundle == 0) {
         // Last bundle, write out data if it is complete.  If it is not
         // complete, don't write until the last line is done... this may
@@ -270,13 +266,13 @@ BufferedTextOutput::BufferState* BufferedTextOutput::getBuffer() const
             while (ts->states.size() <= (size_t)mIndex) ts->states.add(NULL);
             BufferState* bs = ts->states[mIndex].get();
             if (bs != NULL && bs->seq == mSeq) return bs;
-            
+
             ts->states.editItemAt(mIndex) = new BufferState(mIndex);
             bs = ts->states[mIndex].get();
             if (bs != NULL) return bs;
         }
     }
-    
+
     return mGlobalState;
 }
 

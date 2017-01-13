@@ -24,10 +24,15 @@ LOCAL_MODULE_STEM_32 := libhwbinder_benchmark32
 LOCAL_MODULE_TAGS := eng tests
 
 LOCAL_SRC_FILES := Benchmark.cpp
-LOCAL_SHARED_LIBRARIES := libhwbinder libhidlbase libhidltransport libutils android.hardware.tests.libhwbinder@1.0
+LOCAL_SHARED_LIBRARIES := \
+    libhwbinder \
+    libhidlbase \
+    libhidltransport \
+    liblog \
+    libutils \
+    android.hardware.tests.libhwbinder@1.0
 LOCAL_REQUIRED_MODULES := android.hardware.tests.libhwbinder@1.0-impl
 
-LOCAL_STATIC_LIBRARIES := libtestUtil
 LOCAL_MULTILIB := both
 
 include $(BUILD_NATIVE_BENCHMARK)
@@ -42,9 +47,11 @@ LOCAL_MODULE_STEM_32 := libbinder_benchmark32
 LOCAL_MODULE_TAGS := eng tests
 
 LOCAL_SRC_FILES := Benchmark_binder.cpp
-LOCAL_SHARED_LIBRARIES := libbinder libutils android.hardware.tests.libbinder
+LOCAL_SHARED_LIBRARIES := \
+    libbinder \
+    libutils \
+    android.hardware.tests.libbinder
 
-LOCAL_STATIC_LIBRARIES := libtestUtil
 LOCAL_MULTILIB := both
 
 include $(BUILD_NATIVE_BENCHMARK)

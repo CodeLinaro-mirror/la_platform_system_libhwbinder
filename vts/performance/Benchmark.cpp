@@ -14,9 +14,12 @@
  * limitations under the License.
  */
 
+#define LOG_TAG "libhwbinder_benchmark"
+
+#include <android/log.h>
 #include <benchmark/benchmark.h>
 #include <hidl/Status.h>
-#include <hwbinder/ProcessState.h>
+#include <hidl/ServiceManagement.h>
 #include <iostream>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -30,10 +33,8 @@ using android::OK;
 using android::sp;
 using android::status_t;
 
-// libhwbinder:
-using android::hardware::BnInterface;
+// libhidl:
 using android::hardware::defaultServiceManager;
-using android::hardware::ProcessState;
 using android::hardware::Return;
 using android::hardware::Void;
 using android::hardware::hidl_vec;
@@ -53,8 +54,13 @@ const char gServiceName[] = "android.hardware.tests.libhwbinder.IBenchmark";
 
 static bool startServer() {
     sp<IBenchmark> service = IBenchmark::getService(gServiceName, true);
-    service->registerAsService(gServiceName);
-    ProcessState::self()->startThreadPool();
+    status_t status = service->registerAsService(gServiceName);
+
+    if (status != ::android::OK) {
+        ALOGE("Failed to register service %s.", gServiceName);
+        exit(EXIT_FAILURE);
+    }
+
     return 0;
 }
 
@@ -91,7 +97,7 @@ static void BM_sendVec_binderize(benchmark::State& state) {
         state.SkipWithError("Failed to retrieve benchmark service.");
     }
     if (!service->isRemote()) {
-        state.SkipWithError("Benchmark service is not remote");
+        state.SkipWithError("Unable to fetch remote benchmark service.");
     }
     BM_sendVec(state, service);
 }

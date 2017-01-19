@@ -36,8 +36,8 @@
 namespace android {
 namespace hardware {
 
-class BBinder;
-class BpBinder;
+class BHwBinder;
+class BpHwBinder;
 class IInterface;
 class Parcel;
 
@@ -153,8 +153,8 @@ public:
     virtual void*           findObject(const void* objectID) const = 0;
     virtual void            detachObject(const void* objectID) = 0;
 
-    virtual BBinder*        localBinder();
-    virtual BpBinder*       remoteBinder();
+    virtual BHwBinder*        localBinder();
+    virtual BpHwBinder*       remoteBinder();
 
 protected:
     virtual          ~IBinder();

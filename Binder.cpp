@@ -18,7 +18,7 @@
 
 #include <atomic>
 #include <utils/misc.h>
-#include <hwbinder/BpBinder.h>
+#include <hwbinder/BpHwBinder.h>
 #include <hwbinder/IInterface.h>
 #include <hwbinder/Parcel.h>
 
@@ -45,12 +45,12 @@ sp<IInterface>  IBinder::queryLocalInterface(const String16& /*descriptor*/)
     return NULL;
 }
 
-BBinder* IBinder::localBinder()
+BHwBinder* IBinder::localBinder()
 {
     return NULL;
 }
 
-BpBinder* IBinder::remoteBinder()
+BpHwBinder* IBinder::remoteBinder()
 {
     return NULL;
 }
@@ -62,39 +62,39 @@ bool IBinder::checkSubclass(const void* /*subclassID*/) const
 
 // ---------------------------------------------------------------------------
 
-class BBinder::Extras
+class BHwBinder::Extras
 {
 public:
     Mutex mLock;
-    BpBinder::ObjectManager mObjects;
+    BpHwBinder::ObjectManager mObjects;
 };
 
 // ---------------------------------------------------------------------------
 
-BBinder::BBinder() : mExtras(nullptr)
+BHwBinder::BHwBinder() : mExtras(nullptr)
 {
 }
 
-bool BBinder::isBinderAlive() const
+bool BHwBinder::isBinderAlive() const
 {
     return true;
 }
 
-status_t BBinder::pingBinder()
+status_t BHwBinder::pingBinder()
 {
     return NO_ERROR;
 }
 
-const String16& BBinder::getInterfaceDescriptor() const
+const String16& BHwBinder::getInterfaceDescriptor() const
 {
     // This is a local static rather than a global static,
     // to avoid static initializer ordering issues.
     static String16 sEmptyDescriptor;
-    ALOGW("reached BBinder::getInterfaceDescriptor (this=%p)", this);
+    ALOGW("reached BHwBinder::getInterfaceDescriptor (this=%p)", this);
     return sEmptyDescriptor;
 }
 
-status_t BBinder::transact(
+status_t BHwBinder::transact(
     uint32_t code, const Parcel& data, Parcel* reply, uint32_t flags, TransactCallback callback)
 {
     data.setDataPosition(0);
@@ -122,26 +122,26 @@ status_t BBinder::transact(
     return err;
 }
 
-status_t BBinder::linkToDeath(
+status_t BHwBinder::linkToDeath(
     const sp<DeathRecipient>& /*recipient*/, void* /*cookie*/,
     uint32_t /*flags*/)
 {
     return INVALID_OPERATION;
 }
 
-status_t BBinder::unlinkToDeath(
+status_t BHwBinder::unlinkToDeath(
     const wp<DeathRecipient>& /*recipient*/, void* /*cookie*/,
     uint32_t /*flags*/, wp<DeathRecipient>* /*outRecipient*/)
 {
     return INVALID_OPERATION;
 }
 
-status_t BBinder::dump(int /*fd*/, const Vector<String16>& /*args*/)
+status_t BHwBinder::dump(int /*fd*/, const Vector<String16>& /*args*/)
 {
     return NO_ERROR;
 }
 
-void BBinder::attachObject(
+void BHwBinder::attachObject(
     const void* objectID, void* object, void* cleanupCookie,
     object_cleanup_func func)
 {
@@ -163,7 +163,7 @@ void BBinder::attachObject(
     e->mObjects.attach(objectID, object, cleanupCookie, func);
 }
 
-void* BBinder::findObject(const void* objectID) const
+void* BHwBinder::findObject(const void* objectID) const
 {
     Extras* e = mExtras.load(std::memory_order_acquire);
     if (!e) return NULL;
@@ -172,7 +172,7 @@ void* BBinder::findObject(const void* objectID) const
     return e->mObjects.find(objectID);
 }
 
-void BBinder::detachObject(const void* objectID)
+void BHwBinder::detachObject(const void* objectID)
 {
     Extras* e = mExtras.load(std::memory_order_acquire);
     if (!e) return;
@@ -181,19 +181,19 @@ void BBinder::detachObject(const void* objectID)
     e->mObjects.detach(objectID);
 }
 
-BBinder* BBinder::localBinder()
+BHwBinder* BHwBinder::localBinder()
 {
     return this;
 }
 
-BBinder::~BBinder()
+BHwBinder::~BHwBinder()
 {
     Extras* e = mExtras.load(std::memory_order_relaxed);
     if (e) delete e;
 }
 
 
-status_t BBinder::onTransact(
+status_t BHwBinder::onTransact(
     uint32_t code, const Parcel& data, Parcel* reply, uint32_t /*flags*/, TransactCallback callback)
 {
     switch (code) {
@@ -228,12 +228,12 @@ status_t BBinder::onTransact(
 
 enum {
     // This is used to transfer ownership of the remote binder from
-    // the BpRefBase object holding it (when it is constructed), to the
-    // owner of the BpRefBase object when it first acquires that BpRefBase.
+    // the BpHwRefBase object holding it (when it is constructed), to the
+    // owner of the BpHwRefBase object when it first acquires that BpHwRefBase.
     kRemoteAcquired = 0x00000001
 };
 
-BpRefBase::BpRefBase(const sp<IBinder>& o)
+BpHwRefBase::BpHwRefBase(const sp<IBinder>& o)
     : mRemote(o.get()), mRefs(NULL), mState(0)
 {
     extendObjectLifetime(OBJECT_LIFETIME_WEAK);
@@ -244,7 +244,7 @@ BpRefBase::BpRefBase(const sp<IBinder>& o)
     }
 }
 
-BpRefBase::~BpRefBase()
+BpHwRefBase::~BpHwRefBase()
 {
     if (mRemote) {
         if (!(mState.load(std::memory_order_relaxed)&kRemoteAcquired)) {
@@ -254,19 +254,19 @@ BpRefBase::~BpRefBase()
     }
 }
 
-void BpRefBase::onFirstRef()
+void BpHwRefBase::onFirstRef()
 {
     mState.fetch_or(kRemoteAcquired, std::memory_order_relaxed);
 }
 
-void BpRefBase::onLastStrongRef(const void* /*id*/)
+void BpHwRefBase::onLastStrongRef(const void* /*id*/)
 {
     if (mRemote) {
         mRemote->decStrong(this);
     }
 }
 
-bool BpRefBase::onIncStrongAttempted(uint32_t /*flags*/, const void* /*id*/)
+bool BpHwRefBase::onIncStrongAttempted(uint32_t /*flags*/, const void* /*id*/)
 {
     return mRemote ? mRefs->attemptIncStrong(this) : false;
 }

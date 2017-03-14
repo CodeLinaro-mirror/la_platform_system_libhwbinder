@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#define LOG_TAG "ProcessState"
+#define LOG_TAG "hw-ProcessState"
 
 #include <hwbinder/ProcessState.h>
 
@@ -39,7 +39,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
-#define BINDER_VM_SIZE ((1*1024*1024) - (4096 *2))
+#define BINDER_VM_SIZE ((2*1024*1024) - (4096 *2))
 #define DEFAULT_MAX_BINDER_THREADS 0
 
 // -------------------------------------------------------------------------

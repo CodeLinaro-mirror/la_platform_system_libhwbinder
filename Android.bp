@@ -37,7 +37,6 @@ cc_defaults {
         support_system_process: true,
     },
     clang: true,
-    sdclang: false,
     sanitize: {
         misc_undefined: ["integer"],
     },

@@ -39,9 +39,6 @@ cc_defaults {
         support_system_process: true,
     },
     clang: true,
-    sanitize: {
-        misc_undefined: ["integer"],
-    },
     srcs: [
         "Binder.cpp",
         "BpHwBinder.cpp",

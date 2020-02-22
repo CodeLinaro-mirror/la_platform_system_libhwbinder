@@ -74,7 +74,8 @@ cc_library {
 
     export_include_dirs: ["include"],
 
-    visibility: [":__subpackages__"],
+// TODO(b/144056694) Add back this visibility restriction.
+//    visibility: [":__subpackages__"],
 }
 
 // Combined into libhidlbase for efficiency.
